@@ -116,16 +116,27 @@ function doAddEvents(e) {
 	var lookupFirstRow = e.formInput.lookupFirstRow;
 	var lookupLastRow = e.formInput.lookupLastRow;
 
+	var venues = new Record<string, string>;
+
 	var nEvents = eventsLastRow - eventsFirstRow + 1;
 	var events = new Array<CalendarEvent>(nEvents);
 	for (let i = 0; i < events.length; ++i) {
 		events[i] = new CalendarEvent();
 	}
 
+
 	var sheet = SpreadsheetApp.getActiveSheet();
 
 	var range;
 	var data;
+
+	// construct record for venue
+	// assumes that lookup table consists of two columns: venue and address
+	range = makeRange(lookupVenueColumn, lookupFirstRow, lookupAddressColumn, lookupLastRow);
+	data = sheet.getRange(range).getValues();
+	for (let i = 0; i < data.length; ++i) {
+		venues[ data[i][0] ] = data[i][1];
+	}
 
 	range = makeRange(titleColumn, eventsFirstRow, titleColumn, eventsLastRow);
 	data = sheet.getRange(range).getValues();
@@ -157,8 +168,7 @@ function doAddEvents(e) {
 	range = makeRange(venueColumn, eventsFirstRow, venueColumn, eventsLastRow);
 	data = sheet.getRange(range).getValues();
 	for (let i = 0; i < events.length; ++i) {
-		// TODO lookup
-		events[i].location = data[i][0];
+		events[i].location = venues[ data[i][0] ];
 	}
 	
 	// TODO show events
@@ -168,9 +178,11 @@ function doAddEvents(e) {
 				//eventsFirstRow + ' ' + eventsLastRow + ' ' + dateColumn + ' ' + dateRange
 				events[0].title + ' ' + events[0].description + ' ' + 
 					formatDateTime(events[0].startTime) + ' ' + formatDateTime(events[0].endTime) + ' ' +
+					events[0].location +
 					'\n...\n' +
 				events[nEvents-1].title + ' ' + events[nEvents-1].description + ' ' + 
-					formatDateTime(events[nEvents-1].startTime) + ' ' + formatDateTime(events[nEvents-1].endTime)
+					formatDateTime(events[nEvents-1].startTime) + ' ' + formatDateTime(events[nEvents-1].endTime) +
+					events[nEvents-1].location
 			)
 		);
 
