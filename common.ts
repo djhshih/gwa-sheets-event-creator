@@ -102,7 +102,9 @@ function parseTimeInterval(time: string): TimeInterval {
 	return {start: parseTime(startTime), end: parseTime(endTime)};
 }
 
-function doAddEvents(e) {
+var events;
+
+function doGetEvents(e) {
 	var dateColumn = e.formInput.dateColumn;
 	var timeColumn = e.formInput.timeColumn;
 	var venueColumn = e.formInput.venueColumn;
@@ -116,14 +118,13 @@ function doAddEvents(e) {
 	var lookupFirstRow = e.formInput.lookupFirstRow;
 	var lookupLastRow = e.formInput.lookupLastRow;
 
-	var venues = new Record<string, string>;
+	var venues = new Map<string, string>;
 
 	var nEvents = eventsLastRow - eventsFirstRow + 1;
-	var events = new Array<CalendarEvent>(nEvents);
+	events = new Array<CalendarEvent>(nEvents);
 	for (let i = 0; i < events.length; ++i) {
 		events[i] = new CalendarEvent();
 	}
-
 
 	var sheet = SpreadsheetApp.getActiveSheet();
 
@@ -135,7 +136,7 @@ function doAddEvents(e) {
 	range = makeRange(lookupVenueColumn, lookupFirstRow, lookupAddressColumn, lookupLastRow);
 	data = sheet.getRange(range).getValues();
 	for (let i = 0; i < data.length; ++i) {
-		venues[ data[i][0] ] = data[i][1];
+		venues.set(data[i][0], data[i][1]);
 	}
 
 	range = makeRange(titleColumn, eventsFirstRow, titleColumn, eventsLastRow);
@@ -168,56 +169,108 @@ function doAddEvents(e) {
 	range = makeRange(venueColumn, eventsFirstRow, venueColumn, eventsLastRow);
 	data = sheet.getRange(range).getValues();
 	for (let i = 0; i < events.length; ++i) {
-		events[i].location = venues[ data[i][0] ];
+		events[i].location = venues.get(data[i][0]);
 	}
+
+	// TODO remove
+	for (let i = 0; i < events.length; ++i) {
+		addEvent(events[i]);
+	}
+
+	var index = 0;
+	var event = events[index];
+
+	var indexText = CardService.newTextParagraph()
+		.setText(String(index));
+
+	var titleText = CardService.newTextInput()
+		.setFieldName('title')
+		.setTitle('Title')
+		.setValue(event.title)
+		;
 	
-	// TODO show events
+	var startTimeText = CardService.newTextInput()
+		.setFieldName('startTime')
+		.setTitle('Start')
+		.setValue(formatDateTime(event.startTime))
+		;
+
+	var endTimeText = CardService.newTextInput()
+		.setFieldName('endTime')
+		.setTitle('End')
+		.setValue(formatDateTime(event.endTime))
+		;
+
+	var locationText = CardService.newTextInput()
+		.setFieldName('location')
+		.setTitle('Location')
+		.setValue(event.location)
+		;
+
+	var descriptionText = CardService.newTextInput()
+		.setFieldName('description')
+		.setTitle('Description')
+		.setValue(event.description)
+		;
+	
+	// show events
 	var section = CardService.newCardSection()
+		.addWidget(indexText)
+		.addWidget(titleText)
+		.addWidget(startTimeText)
+		.addWidget(endTimeText)
+		.addWidget(locationText)
+		.addWidget(descriptionText)
 		.addWidget(
 			CardService.newTextParagraph().setText(
-				//eventsFirstRow + ' ' + eventsLastRow + ' ' + dateColumn + ' ' + dateRange
-				events[0].title + ' ' + events[0].description + ' ' + 
-					formatDateTime(events[0].startTime) + ' ' + formatDateTime(events[0].endTime) + ' ' +
-					events[0].location +
-					'\n...\n' +
-				events[nEvents-1].title + ' ' + events[nEvents-1].description + ' ' + 
-					formatDateTime(events[nEvents-1].startTime) + ' ' + formatDateTime(events[nEvents-1].endTime) +
+					'\n\n...\n\n' +
+				events[nEvents-1].title + '\n' + 
+					events[nEvents-1].description + '\n' + 
+					formatDateTime(events[nEvents-1].startTime) + '\n' + 
+					formatDateTime(events[nEvents-1].endTime) + '\n' +
 					events[nEvents-1].location
 			)
-		);
+		)
+		;
+
+	// Make button
+	var action = CardService.newAction()
+		.setFunctionName('doAddEvents')
+		.setParameters({index: String(index)});
+	var addButton = CardService.newTextButton()
+		.setText('Add All')
+		.setOnClickAction(action)
+		.setTextButtonStyle(CardService.TextButtonStyle.FILLED);
+	var footer = CardService.newFixedFooter()
+		.setPrimaryButton(addButton);
 
 	var card = CardService.newCardBuilder()
 		.addSection(section)
+		.setFixedFooter(footer)
 		.build();
-
-	// TODO add events to calendar
-	
-	/*
-	var date = Utilities.parseDate(e.formInput.date, "GMT", DATE_FORMAT);
-
-	var timeZone = e.formInput.timeZone;
-	var startTime = combineDateTime(
-		date, Utilities.parseDate(e.formInput.startTime, timeZone, "h:mm a")
-	);
-	var endTime = combineDateTime(
-		date, Utilities.parseDate(e.formInput.endTime, timeZone, "h:mm a")
-	);
-	var description = e.parameters.description;
-
-	// create event
-	var calendar = CalendarApp.getDefaultCalendar();
-	var event = calendar.createEvent(
-		title,
-		startTime,
-		endTime,
-		{
-			location: location,
-			description: description
-		}
-	);
- */
-
 
 	return card;
 }
 
+// FIXME 'events' is not accessible
+// TODO add only event at index
+function doAddEvents(e) {
+	var index = Number(e.parameters.index);
+	for (let i = 0; i < events.length; ++i) {
+		addEvent(events[i]);
+	}
+}
+
+function addEvent(event: CalendarEvent) {
+	// create event
+	var calendar = CalendarApp.getDefaultCalendar();
+	var event = calendar.createEvent(
+		event.title,
+		event.startTime,
+		event.endTime,
+		{
+			location: event.location,
+			description: event.description
+		}
+	);
+}

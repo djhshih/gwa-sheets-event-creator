@@ -92,7 +92,7 @@ function onSheetsHomepage(e) {
 
 	// Make button
 	var action = CardService.newAction()
-		.setFunctionName('doAddEvents');
+		.setFunctionName('doGetEvents');
 	var addButton = CardService.newTextButton()
 		.setText('Add')
 		.setOnClickAction(action)
