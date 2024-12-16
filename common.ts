@@ -102,8 +102,6 @@ function parseTimeInterval(time: string): TimeInterval {
 	return {start: parseTime(startTime), end: parseTime(endTime)};
 }
 
-var events;
-
 function doGetEvents(e) {
 	var dateColumn = e.formInput.dateColumn;
 	var timeColumn = e.formInput.timeColumn;
@@ -121,7 +119,7 @@ function doGetEvents(e) {
 	var venues = new Map<string, string>;
 
 	var nEvents = eventsLastRow - eventsFirstRow + 1;
-	events = new Array<CalendarEvent>(nEvents);
+	var events = new Array<CalendarEvent>(nEvents);
 	for (let i = 0; i < events.length; ++i) {
 		events[i] = new CalendarEvent();
 	}
@@ -169,19 +167,14 @@ function doGetEvents(e) {
 	range = makeRange(venueColumn, eventsFirstRow, venueColumn, eventsLastRow);
 	data = sheet.getRange(range).getValues();
 	for (let i = 0; i < events.length; ++i) {
-		events[i].location = venues.get(data[i][0]);
-	}
-
-	// TODO remove
-	for (let i = 0; i < events.length; ++i) {
-		addEvent(events[i]);
+		events[i].location = venues.get(data[i][0]) as string;
 	}
 
 	var index = 0;
 	var event = events[index];
 
 	var indexText = CardService.newTextParagraph()
-		.setText(String(index));
+		.setText(`Event ${String(index + 1)} of ${nEvents}`);
 
 	var titleText = CardService.newTextInput()
 		.setFieldName('title')
@@ -212,7 +205,7 @@ function doGetEvents(e) {
 		.setTitle('Description')
 		.setValue(event.description)
 		;
-	
+
 	// show events
 	var section = CardService.newCardSection()
 		.addWidget(indexText)
@@ -221,28 +214,26 @@ function doGetEvents(e) {
 		.addWidget(endTimeText)
 		.addWidget(locationText)
 		.addWidget(descriptionText)
-		.addWidget(
-			CardService.newTextParagraph().setText(
-					'\n\n...\n\n' +
-				events[nEvents-1].title + '\n' + 
-					events[nEvents-1].description + '\n' + 
-					formatDateTime(events[nEvents-1].startTime) + '\n' + 
-					formatDateTime(events[nEvents-1].endTime) + '\n' +
-					events[nEvents-1].location
-			)
-		)
 		;
-
+	
 	// Make button
-	var action = CardService.newAction()
+	var actionOne = CardService.newAction()
+		.setFunctionName('doAddEvent')
+		.setParameters({index: String(index), events: JSON.stringify(events)});
+	var actionAll = CardService.newAction()
 		.setFunctionName('doAddEvents')
-		.setParameters({index: String(index)});
-	var addButton = CardService.newTextButton()
+		.setParameters({index: String(index), events: JSON.stringify(events)});
+	var addOneButton = CardService.newTextButton()
+		.setText('Add')
+		.setOnClickAction(actionOne)
+		.setTextButtonStyle(CardService.TextButtonStyle.FILLED);
+	var addAllButton = CardService.newTextButton()
 		.setText('Add All')
-		.setOnClickAction(action)
+		.setOnClickAction(actionAll)
 		.setTextButtonStyle(CardService.TextButtonStyle.FILLED);
 	var footer = CardService.newFixedFooter()
-		.setPrimaryButton(addButton);
+		.setPrimaryButton(addOneButton)
+		.setSecondaryButton(addAllButton);
 
 	var card = CardService.newCardBuilder()
 		.addSection(section)
@@ -252,16 +243,34 @@ function doGetEvents(e) {
 	return card;
 }
 
-// FIXME 'events' is not accessible
-// TODO add only event at index
+function doAddEvent(e) {
+	var index = Number(e.parameters.index);
+	var events = JSON.parse(e.parameters.events);
+	if (index >= 0 && index < events.length) {
+		addEvent(events[index]);
+	} else {
+		throw new RangeError('Event index is out of range')
+	}
+}
+
 function doAddEvents(e) {
 	var index = Number(e.parameters.index);
-	for (let i = 0; i < events.length; ++i) {
+	var events = JSON.parse(e.parameters.events);
+	for (let i = index; i < events.length; ++i) {
 		addEvent(events[i]);
 	}
 }
 
 function addEvent(event: CalendarEvent) {
+
+	// may need to manually convert because JSON.parse does not parse to Date
+	if (!(event.startTime instanceof Date)) {
+		event.startTime = new Date(event.startTime);
+	}
+	if (!(event.endTime instanceof Date)) {
+		event.endTime = new Date(event.endTime);
+	}
+
 	// create event
 	var calendar = CalendarApp.getDefaultCalendar();
 	var event = calendar.createEvent(
