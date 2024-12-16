@@ -251,14 +251,44 @@ function doAddEvent(e) {
 	} else {
 		throw new RangeError('Event index is out of range')
 	}
+
+	// TODO populate next event
 }
 
 function doAddEvents(e) {
 	var index = Number(e.parameters.index);
 	var events = JSON.parse(e.parameters.events);
-	for (let i = index; i < events.length; ++i) {
-		addEvent(events[i]);
+	if (index >= 0 && index < events.length) {
+		for (let i = index; i < events.length; ++i) {
+			addEvent(events[i]);
+		}
+	} else {
+		throw new RangeError('Event index is out of range')
 	}
+
+	var calendar = CalendarApp.getDefaultCalendar();
+
+	var nEvents = events.length - index;
+
+	var text = CardService.newTextParagraph();
+	if (nEvents > 1) {
+		text.setText(
+			`A total of ${events.length - index} events added to: ${calendar.getId()}`
+		);
+	} else {
+		text.setText(
+			`Event added to: ${calendar.getId()}`
+		);
+	}
+
+	var section = CardService.newCardSection()
+		.addWidget(text);
+
+	var card = CardService.newCardBuilder()
+		.addSection(section)
+		.build();
+	
+	return card;
 }
 
 function addEvent(event: CalendarEvent) {
