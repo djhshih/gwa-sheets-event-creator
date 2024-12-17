@@ -173,67 +173,18 @@ function doGetEvents(e) {
 	var index = 0;
 	var event = events[index];
 
-	var indexText = CardService.newTextParagraph()
-		.setText(`Event ${String(index + 1)} of ${nEvents}`);
-
-	var titleText = CardService.newTextInput()
-		.setFieldName('title')
-		.setTitle('Title')
-		.setValue(event.title)
-		;
-	
-	var startTimeText = CardService.newTextInput()
-		.setFieldName('startTime')
-		.setTitle('Start')
-		.setValue(formatDateTime(event.startTime))
-		;
-
-	var endTimeText = CardService.newTextInput()
-		.setFieldName('endTime')
-		.setTitle('End')
-		.setValue(formatDateTime(event.endTime))
-		;
-
-	var locationText = CardService.newTextInput()
-		.setFieldName('location')
-		.setTitle('Location')
-		.setValue(event.location)
-		;
-
-	var descriptionText = CardService.newTextInput()
-		.setFieldName('description')
-		.setTitle('Description')
-		.setValue(event.description)
-		;
-
-	// show events
-	var section = CardService.newCardSection()
-		.addWidget(indexText)
-		.addWidget(titleText)
-		.addWidget(startTimeText)
-		.addWidget(endTimeText)
-		.addWidget(locationText)
-		.addWidget(descriptionText)
-		;
+	var section = createSection(event);
 	
 	// Make button
-	var actionOne = CardService.newAction()
-		.setFunctionName('doAddEvent')
-		.setParameters({index: String(index), events: JSON.stringify(events)});
 	var actionAll = CardService.newAction()
 		.setFunctionName('doAddEvents')
-		.setParameters({index: String(index), events: JSON.stringify(events)});
-	var addOneButton = CardService.newTextButton()
-		.setText('Add')
-		.setOnClickAction(actionOne)
-		.setTextButtonStyle(CardService.TextButtonStyle.FILLED);
+		.setParameters({index: String(0), events: JSON.stringify(events)});
 	var addAllButton = CardService.newTextButton()
 		.setText('Add All')
 		.setOnClickAction(actionAll)
 		.setTextButtonStyle(CardService.TextButtonStyle.FILLED);
 	var footer = CardService.newFixedFooter()
-		.setPrimaryButton(addOneButton)
-		.setSecondaryButton(addAllButton);
+		.setPrimaryButton(addAllButton);
 
 	var card = CardService.newCardBuilder()
 		.addSection(section)
@@ -243,16 +194,62 @@ function doGetEvents(e) {
 	return card;
 }
 
-function doAddEvent(e) {
-	var index = Number(e.parameters.index);
-	var events = JSON.parse(e.parameters.events);
-	if (index >= 0 && index < events.length) {
-		addEvent(events[index]);
-	} else {
-		throw new RangeError('Event index is out of range')
-	}
+function createSection(event) {
+	var titleText = CardService.newTextParagraph()
+		.setText(`Title: ${event.title}`);
+	
+	var startTimeText = CardService.newTextParagraph()
+		.setText('Start: ' + formatDateTime(event.startTime));
 
-	// TODO populate next event
+	var endTimeText = CardService.newTextParagraph()
+		.setText('End: ' + formatDateTime(event.endTime));
+
+	var locationText = CardService.newTextParagraph()
+		.setText('Location: ' + event.location);
+
+	var descriptionText = CardService.newTextParagraph()
+		.setText('Description: ' + event.description);
+
+	var actionOne = CardService.newAction()
+		.setFunctionName('doAddEvent')
+		.setParameters({event: JSON.stringify(event)});
+
+	var addOneButton = CardService.newTextButton()
+		.setText('Add')
+		.setOnClickAction(actionOne)
+		.setTextButtonStyle(CardService.TextButtonStyle.FILLED);
+
+	// show events
+	var section = CardService.newCardSection()
+		.addWidget(titleText)
+		.addWidget(startTimeText)
+		.addWidget(endTimeText)
+		.addWidget(locationText)
+		.addWidget(descriptionText)
+		.addWidget(addOneButton)
+		;
+
+	return section;
+}
+
+function doAddEvent(e) {
+	var event = JSON.parse(e.parameters.event);
+	addEvent(event);
+
+	var calendar = CalendarApp.getDefaultCalendar();
+	var text = CardService.newTextParagraph()
+		.setText(
+			`Event added to: ${calendar.getId()}`
+		);
+
+	var section = CardService.newCardSection()
+		.addWidget(text);
+
+	var card = CardService.newCardBuilder()
+		.addSection(section)
+		.build();
+	
+	return card;
 }
 
 function doAddEvents(e) {
