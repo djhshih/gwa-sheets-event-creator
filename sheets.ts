@@ -1,3 +1,5 @@
+// TODO infer first and last rows
+
 function onSheetsHomepage(e) {
 	var promptLabel = CardService.newTextParagraph()
 		.setText('Select the header for each field:');
