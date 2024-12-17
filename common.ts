@@ -170,11 +170,8 @@ function doGetEvents(e) {
 		events[i].location = venues.get(data[i][0]) as string;
 	}
 
-	var index = 0;
-	var event = events[index];
+	var builder = CardService.newCardBuilder();
 
-	var section = createSection(event);
-	
 	// Make button
 	var actionAll = CardService.newAction()
 		.setFunctionName('doAddEvents')
@@ -186,12 +183,14 @@ function doGetEvents(e) {
 	var footer = CardService.newFixedFooter()
 		.setPrimaryButton(addAllButton);
 
-	var card = CardService.newCardBuilder()
-		.addSection(section)
-		.setFixedFooter(footer)
-		.build();
+	builder.setFixedFooter(footer)
 
-	return card;
+	for (let i = 0; i < events.length; ++i) {
+		let section = createSection(events[i]);
+		builder.addSection(section);
+	}
+
+	return builder.build();
 }
 
 function createSection(event) {
